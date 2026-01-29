@@ -1,8 +1,8 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-  /***********************
-   * IST CLOCK
-   ***********************/
+  /* =======================
+     IST CLOCK
+  ======================= */
   const timeBox = document.getElementById("time");
   function updateTime() {
     timeBox.textContent =
@@ -11,9 +11,9 @@ document.addEventListener("DOMContentLoaded", () => {
   setInterval(updateTime, 1000);
   updateTime();
 
-  /***********************
-   * UI
-   ***********************/
+  /* =======================
+     UI REFERENCES
+  ======================= */
   const signalBox = document.getElementById("signalBox");
   const scannerBox = document.getElementById("scanner");
   const assetSelect = document.getElementById("assetSelect");
@@ -26,9 +26,9 @@ document.addEventListener("DOMContentLoaded", () => {
       "NO SIGNAL";
   }
 
-  /***********************
-   * ASSETS (CRYPTO SCANNER)
-   ***********************/
+  /* =======================
+     CRYPTO ASSETS (REAL TIME)
+  ======================= */
   const CRYPTO_ASSETS = {
     BTC: "btcusdt",
     ETH: "ethusdt",
@@ -37,12 +37,12 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   let tradeSocket = null;
-  let candles = [];
+  let tradeCandles = [];
   let scannerData = {};
 
-  /***********************
-   * INDICATORS
-   ***********************/
+  /* =======================
+     INDICATORS
+  ======================= */
   function EMA(v, p) {
     let k = 2 / (p + 1), e = v[0];
     for (let i = 1; i < v.length; i++) e = v[i] * k + e * (1 - k);
@@ -64,54 +64,76 @@ document.addEventListener("DOMContentLoaded", () => {
       s + Math.abs(x.close - x.open), 0) / 10;
   }
 
-  /***********************
-   * MOMENTUM SCORE
-   ***********************/
+  /* =======================
+     MOMENTUM SCORE
+  ======================= */
   function momentumScore(c) {
     if (c.length < 15) return 0;
     const close = c.map(x => x.close);
     const open = c.map(x => x.open);
     let score = 0;
+
     if (EMA(close.slice(-5), 5) > EMA(close.slice(-13), 13)) score++;
     if (RSI(close) > 55 || RSI(close) < 45) score++;
     if (Math.abs(close.at(-1) - open.at(-1)) > avgBody(c)) score++;
+
     return score;
   }
 
-  /***********************
-   * SCANNER RENDER
-   ***********************/
+  /* =======================
+     RENDER SCANNER CARDS
+  ======================= */
   function renderScanner() {
-    let output = [];
-    for (let a in scannerData) {
-      const s = momentumScore(scannerData[a]);
-      output.push(`${a}: ${s >= 2 ? "🔥 HOT" : "⚪ NEUTRAL"}`);
+    scannerBox.innerHTML = "";
+
+    Object.keys(scannerData).forEach(asset => {
+      const score = momentumScore(scannerData[asset]);
+      const state = score >= 2 ? "hot" : "neutral";
+
+      const card = document.createElement("div");
+      card.className = `scanner-item ${state}`;
+      card.innerHTML = `
+        ${asset}<br>
+        ${state === "hot" ? "🔥 HOT" : "⚪ NEUTRAL"}
+      `;
+
+      scannerBox.appendChild(card);
+    });
+
+    if (!scannerBox.children.length) {
+      scannerBox.textContent = "Waiting for market data…";
     }
-    scannerBox.textContent =
-      output.length ? output.join(" | ") : "Waiting for market data…";
   }
 
-  /***********************
-   * SCANNER SOCKETS
-   ***********************/
+  /* =======================
+     INIT SCANNER SOCKETS
+  ======================= */
   Object.keys(CRYPTO_ASSETS).forEach(asset => {
     scannerData[asset] = [];
+
     const ws = new WebSocket(
       `wss://stream.binance.com:9443/ws/${CRYPTO_ASSETS[asset]}@kline_1m`
     );
+
     ws.onmessage = e => {
       const k = JSON.parse(e.data).k;
       if (!k.x) return;
-      scannerData[asset].push({ open:+k.o, close:+k.c });
+
+      scannerData[asset].push({
+        open: +k.o,
+        close: +k.c
+      });
+
       if (scannerData[asset].length > 50)
         scannerData[asset].shift();
+
       renderScanner();
     };
   });
 
-  /***********************
-   * TRADE CONNECTION (CRYPTO ONLY)
-   ***********************/
+  /* =======================
+     TRADE CONNECTION
+  ======================= */
   function connectMarket(asset) {
     if (!CRYPTO_ASSETS[asset]) {
       setSignal("neutral");
@@ -119,7 +141,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (tradeSocket) tradeSocket.close();
-    candles = [];
+    tradeCandles = [];
     setSignal("neutral");
 
     tradeSocket = new WebSocket(
@@ -129,31 +151,38 @@ document.addEventListener("DOMContentLoaded", () => {
     tradeSocket.onmessage = e => {
       const k = JSON.parse(e.data).k;
       if (!k.x) return;
-      candles.push({ open:+k.o, close:+k.c });
-      if (candles.length > 50) candles.shift();
+
+      tradeCandles.push({
+        open: +k.o,
+        close: +k.c
+      });
+
+      if (tradeCandles.length > 50)
+        tradeCandles.shift();
+
       evaluateSignal();
     };
   }
 
-  /***********************
-   * SIGNAL ENGINE
-   ***********************/
+  /* =======================
+     SIGNAL ENGINE
+  ======================= */
   function evaluateSignal() {
-    if (candles.length < 15) return setSignal("neutral");
+    if (tradeCandles.length < 15) return setSignal("neutral");
 
-    const c = candles.map(x => x.close);
-    const o = candles.map(x => x.open);
+    const c = tradeCandles.map(x => x.close);
+    const o = tradeCandles.map(x => x.open);
 
     if (
       EMA(c.slice(-5), 5) > EMA(c.slice(-13), 13) &&
       RSI(c) > 55 &&
-      Math.abs(c.at(-1) - o.at(-1)) > avgBody(candles)
+      Math.abs(c.at(-1) - o.at(-1)) > avgBody(tradeCandles)
     ) return setSignal("up");
 
     if (
       EMA(c.slice(-5), 5) < EMA(c.slice(-13), 13) &&
       RSI(c) < 45 &&
-      Math.abs(c.at(-1) - o.at(-1)) > avgBody(candles)
+      Math.abs(c.at(-1) - o.at(-1)) > avgBody(tradeCandles)
     ) return setSignal("down");
 
     setSignal("neutral");
