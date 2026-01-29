@@ -7,86 +7,79 @@
 </head>
 <body>
 
-  <div class="app">
+<div class="app">
 
-    <header class="header">
-      <h1>QUANTUM SIGNAL BOT</h1>
-      <span class="subtitle">Scalping Engine · 30s Execution</span>
-    </header>
+  <header class="header">
+    <h1>QUANTUM SIGNAL BOT</h1>
+    <span class="subtitle">Real-Time Momentum Scanner · Scalping Engine</span>
+  </header>
 
-    <section class="top-panel">
+  <!-- MOMENTUM SCANNER -->
+  <section class="top-panel">
+    <div class="card" style="grid-column: span 3">
+      <label>MOMENTUM SCANNER (LIVE)</label>
+      <div id="scanner" class="value">Loading scanner...</div>
+    </div>
+  </section>
 
-      <div class="card">
-        <label>ASSET</label>
-        <select id="assetSelect">
-          <!-- CRYPTO -->
-          <optgroup label="CRYPTO">
-            <option value="BTC">BTC</option>
-            <option value="ETH">ETH</option>
-            <option value="XRP">XRP</option>
-            <option value="SOL">SOLANA</option>
-          </optgroup>
+  <section class="top-panel">
 
-          <!-- FOREX -->
-          <optgroup label="FOREX">
-            <option value="EUR/USD">EUR / USD</option>
-            <option value="GBP/USD">GBP / USD</option>
-            <option value="USD/JPY">USD / JPY</option>
-          </optgroup>
+    <div class="card">
+      <label>ASSET</label>
+      <select id="assetSelect">
+        <optgroup label="CRYPTO">
+          <option value="BTC">BTC</option>
+          <option value="ETH">ETH</option>
+          <option value="XRP">XRP</option>
+          <option value="SOL">SOL</option>
+        </optgroup>
 
-          <!-- METALS -->
-          <optgroup label="METALS">
-            <option value="XAU/USD">XAU / USD (GOLD)</option>
-            <option value="XAG/USD">XAG / USD (SILVER)</option>
-          </optgroup>
+        <optgroup label="FOREX">
+          <option value="EUR/USD">EUR / USD</option>
+          <option value="GBP/USD">GBP / USD</option>
+          <option value="USD/JPY">USD / JPY</option>
+          <option value="EUR/JPY">EUR / JPY</option>
+          <option value="GBP/JPY">GBP / JPY</option>
+          <option value="AUD/USD">AUD / USD</option>
+          <option value="USD/CAD">USD / CAD</option>
+        </optgroup>
 
-          <!-- OTC -->
-          <optgroup label="OTC">
-            <option value="OTC">OTC PAIR</option>
-          </optgroup>
-        </select>
-      </div>
+        <optgroup label="METALS">
+          <option value="XAU/USD">XAU / USD</option>
+          <option value="XAG/USD">XAG / USD</option>
+        </optgroup>
+      </select>
+    </div>
 
-      <div class="card">
-        <label>TIME (IST)</label>
-        <div class="value" id="time">--:--:--</div>
-      </div>
+    <div class="card">
+      <label>TIME (IST)</label>
+      <div class="value" id="time">--:--:--</div>
+    </div>
 
-      <div class="card">
-        <label>SIGNAL</label>
-        <div class="value neutral" id="signalText">WAITING</div>
-      </div>
+    <div class="card">
+      <label>SIGNAL</label>
+      <div class="value">SCALPING MODE</div>
+    </div>
 
-    </section>
+  </section>
 
-    <section class="signal-panel">
-      <div class="signal-box neutral" id="signalBox">
-        NO SIGNAL
-      </div>
-      <div class="entry-text">
-        ENTRY: NEXT CANDLE · EXIT: +30s
-      </div>
-    </section>
+  <section class="signal-panel">
+    <div class="signal-box neutral" id="signalBox">NO SIGNAL</div>
+    <div class="entry-text">ENTRY: NEXT CANDLE · EXIT: +30s</div>
+  </section>
 
-    <footer class="footer">
-      <span>Manual Execution · Scalping Mode · Discipline Required</span>
-    </footer>
+  <footer class="footer">
+    <span>Scanner → Select HOT asset → Execute precisely</span>
+  </footer>
 
-  </div>
+</div>
 
-  <script src="app.js"></script>
-
-  <script>
-    // ASSET SWITCH HANDLER (UI → LOGIC)
-    const assetSelect = document.getElementById("assetSelect");
-
-    assetSelect.addEventListener("change", () => {
-      const asset = assetSelect.value;
-      if (typeof connectMarket === "function") {
-        connectMarket(asset);
-      }
-    });
-  </script>
+<script src="app.js"></script>
+<script>
+  document.getElementById("assetSelect").addEventListener("change", e => {
+    connectMarket(e.target.value);
+  });
+</script>
 
 </body>
 </html>
