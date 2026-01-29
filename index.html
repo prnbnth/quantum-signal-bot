@@ -11,17 +11,39 @@
 
     <header class="header">
       <h1>QUANTUM SIGNAL BOT</h1>
-      <span class="subtitle">1-Minute Precision Engine</span>
+      <span class="subtitle">Scalping Engine · 30s Execution</span>
     </header>
 
     <section class="top-panel">
+
       <div class="card">
         <label>ASSET</label>
-        <select>
-          <option>BTC</option>
-          <option>ETH</option>
-          <option>XRP</option>
-          <option>SOLANA</option>
+        <select id="assetSelect">
+          <!-- CRYPTO -->
+          <optgroup label="CRYPTO">
+            <option value="BTC">BTC</option>
+            <option value="ETH">ETH</option>
+            <option value="XRP">XRP</option>
+            <option value="SOL">SOLANA</option>
+          </optgroup>
+
+          <!-- FOREX -->
+          <optgroup label="FOREX">
+            <option value="EUR/USD">EUR / USD</option>
+            <option value="GBP/USD">GBP / USD</option>
+            <option value="USD/JPY">USD / JPY</option>
+          </optgroup>
+
+          <!-- METALS -->
+          <optgroup label="METALS">
+            <option value="XAU/USD">XAU / USD (GOLD)</option>
+            <option value="XAG/USD">XAG / USD (SILVER)</option>
+          </optgroup>
+
+          <!-- OTC -->
+          <optgroup label="OTC">
+            <option value="OTC">OTC PAIR</option>
+          </optgroup>
         </select>
       </div>
 
@@ -31,27 +53,40 @@
       </div>
 
       <div class="card">
-        <label>STATUS</label>
-        <div class="value neutral">WAITING</div>
+        <label>SIGNAL</label>
+        <div class="value neutral" id="signalText">WAITING</div>
       </div>
+
     </section>
 
     <section class="signal-panel">
       <div class="signal-box neutral" id="signalBox">
-  NO SIGNAL
-</div>
-
+        NO SIGNAL
+      </div>
       <div class="entry-text">
-        ENTRY: NEXT CANDLE
+        ENTRY: NEXT CANDLE · EXIT: +30s
       </div>
     </section>
 
     <footer class="footer">
-      <span>Manual Execution • 1 Minute Expiry • Discipline Mode</span>
+      <span>Manual Execution · Scalping Mode · Discipline Required</span>
     </footer>
 
   </div>
 
   <script src="app.js"></script>
+
+  <script>
+    // ASSET SWITCH HANDLER (UI → LOGIC)
+    const assetSelect = document.getElementById("assetSelect");
+
+    assetSelect.addEventListener("change", () => {
+      const asset = assetSelect.value;
+      if (typeof connectMarket === "function") {
+        connectMarket(asset);
+      }
+    });
+  </script>
+
 </body>
 </html>
