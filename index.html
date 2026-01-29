@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Quantum Signal Bot</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
@@ -14,16 +14,15 @@
     <span class="subtitle">Real-Time Momentum Scanner · Scalping Engine</span>
   </header>
 
-  <!-- MOMENTUM SCANNER -->
+  <!-- SCANNER -->
   <section class="top-panel">
     <div class="card" style="grid-column: span 3">
       <label>MOMENTUM SCANNER (LIVE)</label>
-      <div id="scanner" class="value">Loading scanner...</div>
+      <div id="scanner" class="value">Initializing scanner…</div>
     </div>
   </section>
 
   <section class="top-panel">
-
     <div class="card">
       <label>ASSET</label>
       <select id="assetSelect">
@@ -60,7 +59,6 @@
       <label>SIGNAL</label>
       <div class="value">SCALPING MODE</div>
     </div>
-
   </section>
 
   <section class="signal-panel">
@@ -69,17 +67,12 @@
   </section>
 
   <footer class="footer">
-    <span>Scanner → Select HOT asset → Execute precisely</span>
+    Scanner → Select HOT asset → Execute precisely
   </footer>
 
 </div>
 
-<script src="app.js"></script>
-<script>
-  document.getElementById("assetSelect").addEventListener("change", e => {
-    connectMarket(e.target.value);
-  });
-</script>
+<script src="app.js" defer></script>
 
 </body>
 </html>
