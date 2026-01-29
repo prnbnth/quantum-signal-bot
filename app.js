@@ -1,23 +1,19 @@
-/*************************************************
+/***********************
  * IST CLOCK
- *************************************************/
+ ***********************/
 function updateTime() {
-  const now = new Date().toLocaleTimeString("en-IN", {
-    timeZone: "Asia/Kolkata"
-  });
-  document.getElementById("time").textContent = now;
+  document.getElementById("time").textContent =
+    new Date().toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata" });
 }
 setInterval(updateTime, 1000);
 updateTime();
 
-/*************************************************
- * UI REFERENCES
- *************************************************/
+/***********************
+ * UI
+ ***********************/
 const signalBox = document.getElementById("signalBox");
+const scannerBox = document.getElementById("scanner");
 
-/*************************************************
- * SIGNAL UI
- *************************************************/
 function setSignal(state) {
   signalBox.className = `signal-box ${state}`;
   signalBox.textContent =
@@ -26,16 +22,9 @@ function setSignal(state) {
     "NO SIGNAL";
 }
 
-/*************************************************
- * MARKET DATA
- *************************************************/
-let socket = null;
-let candles = [];
-let currentAsset = "BTC";
-
-/*************************************************
+/***********************
  * ASSET MAP
- *************************************************/
+ ***********************/
 const ASSETS = {
   BTC: { type: "crypto", symbol: "btcusdt" },
   ETH: { type: "crypto", symbol: "ethusdt" },
@@ -45,148 +34,130 @@ const ASSETS = {
   "EUR/USD": { type: "forex", tv: "FX:EURUSD" },
   "GBP/USD": { type: "forex", tv: "FX:GBPUSD" },
   "USD/JPY": { type: "forex", tv: "FX:USDJPY" },
-  "XAU/USD": { type: "forex", tv: "OANDA:XAUUSD" },
-  "XAG/USD": { type: "forex", tv: "OANDA:XAGUSD" },
+  "EUR/JPY": { type: "forex", tv: "FX:EURJPY" },
+  "GBP/JPY": { type: "forex", tv: "FX:GBPJPY" },
+  "AUD/USD": { type: "forex", tv: "FX:AUDUSD" },
+  "USD/CAD": { type: "forex", tv: "FX:USDCAD" },
 
-  "OTC": { type: "forex", tv: "FX:EURUSD" }
+  "XAU/USD": { type: "forex", tv: "OANDA:XAUUSD" },
+  "XAG/USD": { type: "forex", tv: "OANDA:XAGUSD" }
 };
 
-/*************************************************
- * CONNECT MARKET
- *************************************************/
+/***********************
+ * DATA STORAGE
+ ***********************/
+let candles = [];
+let socket = null;
+let scannerData = {};
+
+/***********************
+ * INDICATORS
+ ***********************/
+function EMA(v, p) {
+  let k = 2 / (p + 1), e = v[0];
+  for (let i = 1; i < v.length; i++) e = v[i] * k + e * (1 - k);
+  return e;
+}
+
+function RSI(v, p = 7) {
+  let g = 0, l = 0;
+  for (let i = v.length - p; i < v.length - 1; i++) {
+    let d = v[i + 1] - v[i];
+    d >= 0 ? g += d : l -= d;
+  }
+  if (l === 0) return 100;
+  return 100 - (100 / (1 + g / l));
+}
+
+function avgBody(c) {
+  return c.slice(-10).reduce((s, x) =>
+    s + Math.abs(x.close - x.open), 0) / 10;
+}
+
+/***********************
+ * MOMENTUM SCORE
+ ***********************/
+function momentumScore(c) {
+  if (c.length < 15) return 0;
+  const close = c.map(x => x.close);
+  const open = c.map(x => x.open);
+  let score = 0;
+  if (EMA(close.slice(-5), 5) > EMA(close.slice(-13), 13)) score++;
+  if (RSI(close) > 55 || RSI(close) < 45) score++;
+  if (Math.abs(close.at(-1) - open.at(-1)) > avgBody(c)) score++;
+  return score;
+}
+
+/***********************
+ * SCANNER DISPLAY
+ ***********************/
+function renderScanner() {
+  let rows = [];
+  for (let a in scannerData) {
+    const s = momentumScore(scannerData[a]);
+    rows.push(`${a}: ${s >= 2 ? "🔥 HOT" : "⚪ NEUTRAL"}`);
+  }
+  scannerBox.innerHTML = rows.join(" | ");
+}
+
+/***********************
+ * CONNECT MARKET (TRADE VIEW)
+ ***********************/
 function connectMarket(assetKey) {
   if (socket) socket.close();
   candles = [];
   setSignal("neutral");
 
-  currentAsset = assetKey;
   const asset = ASSETS[assetKey];
 
   if (asset.type === "crypto") {
-    connectCrypto(asset.symbol);
-  } else {
-    connectForex(asset.tv);
-  }
-}
-
-/*************************************************
- * CRYPTO (BINANCE WEBSOCKET)
- *************************************************/
-function connectCrypto(symbol) {
-  socket = new WebSocket(
-    `wss://stream.binance.com:9443/ws/${symbol}@kline_1m`
-  );
-
-  socket.onmessage = e => {
-    const k = JSON.parse(e.data).k;
-    if (!k.x) return;
-
-    candles.push({
-      open: +k.o,
-      close: +k.c
-    });
-
-    if (candles.length > 50) candles.shift();
-    evaluateSignal();
-  };
-}
-
-/*************************************************
- * FOREX / METALS / OTC (POLLING)
- *************************************************/
-async function connectForex(tvSymbol) {
-  async function fetchCandle() {
-    try {
-      const url =
-        `https://scanner.tradingview.com/symbol?symbol=${tvSymbol}&resolution=1`;
-      const res = await fetch(url);
-      const data = await res.json();
-
-      if (!data?.data?.length) return;
-
-      const last = data.data.at(-1);
-      candles.push({
-        open: last[1],
-        close: last[4]
-      });
-
+    socket = new WebSocket(
+      `wss://stream.binance.com:9443/ws/${asset.symbol}@kline_1m`
+    );
+    socket.onmessage = e => {
+      const k = JSON.parse(e.data).k;
+      if (!k.x) return;
+      candles.push({ open: +k.o, close: +k.c });
       if (candles.length > 50) candles.shift();
       evaluateSignal();
-    } catch (e) {
-      setSignal("neutral");
-    }
+    };
   }
-
-  fetchCandle();
-  setInterval(fetchCandle, 60000);
 }
 
-/*************************************************
- * INDICATORS (SCALPING)
- *************************************************/
-function EMA(values, period) {
-  const k = 2 / (period + 1);
-  let ema = values[0];
-  for (let i = 1; i < values.length; i++) {
-    ema = values[i] * k + ema * (1 - k);
-  }
-  return ema;
-}
-
-function RSI(values, period = 7) {
-  let gains = 0, losses = 0;
-  for (let i = values.length - period; i < values.length - 1; i++) {
-    const d = values[i + 1] - values[i];
-    d >= 0 ? gains += d : losses -= d;
-  }
-  if (losses === 0) return 100;
-  const rs = gains / losses;
-  return 100 - (100 / (1 + rs));
-}
-
-/*************************************************
- * VOLATILITY FILTER
- *************************************************/
-function avgBody() {
-  const recent = candles.slice(-10);
-  return recent.reduce((s, c) => s + Math.abs(c.close - c.open), 0) / recent.length;
-}
-
-/*************************************************
- * SCALPING SIGNAL ENGINE
- *************************************************/
+/***********************
+ * SIGNAL ENGINE
+ ***********************/
 function evaluateSignal() {
   if (candles.length < 15) return setSignal("neutral");
 
-  const closes = candles.map(c => c.close);
-  const opens = candles.map(c => c.open);
-
-  const ema5 = EMA(closes.slice(-5), 5);
-  const ema13 = EMA(closes.slice(-13), 13);
-  const rsi7 = RSI(closes);
-
-  const lastClose = closes.at(-1);
-  const lastOpen = opens.at(-1);
-  const body = Math.abs(lastClose - lastOpen);
+  const c = candles.map(x => x.close);
+  const o = candles.map(x => x.open);
 
   if (
-    ema5 > ema13 &&
-    rsi7 > 55 &&
-    lastClose > lastOpen &&
-    body > avgBody()
+    EMA(c.slice(-5), 5) > EMA(c.slice(-13), 13) &&
+    RSI(c) > 55 &&
+    Math.abs(c.at(-1) - o.at(-1)) > avgBody(candles)
   ) return setSignal("up");
 
   if (
-    ema5 < ema13 &&
-    rsi7 < 45 &&
-    lastClose < lastOpen &&
-    body > avgBody()
+    EMA(c.slice(-5), 5) < EMA(c.slice(-13), 13) &&
+    RSI(c) < 45 &&
+    Math.abs(c.at(-1) - o.at(-1)) > avgBody(candles)
   ) return setSignal("down");
 
   setSignal("neutral");
 }
 
-/*************************************************
- * INITIAL LOAD
- *************************************************/
-connectMarket("BTC");
+/***********************
+ * INIT SCANNER (CRYPTO ONLY – REAL TIME)
+ ***********************/
+["BTC","ETH","XRP","SOL"].forEach(a => {
+  scannerData[a] = [];
+  const ws = new WebSocket(
+    `wss://stream.binance.com:9443/ws/${ASSETS[a].symbol}@kline_1m`
+  );
+  ws.onmessage = e => {
+    const k = JSON.parse(e.data).k;
+    if (!k.x) return;
+    scannerData[a].push({ open:+k.o, close:+k.c });
+    if (
