@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Quantum Signal Bot</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app">
+
+    <header class="header">
+      <h1>QUANTUM SIGNAL BOT</h1>
+      <span class="subtitle">1-Minute Precision Engine</span>
+    </header>
+
+    <section class="top-panel">
+      <div class="card">
+        <label>ASSET</label>
+        <select>
+          <option>BTC</option>
+          <option>ETH</option>
+          <option>XRP</option>
+          <option>SOLANA</option>
+        </select>
+      </div>
+
+      <div class="card">
+        <label>TIME (IST)</label>
+        <div class="value" id="time">--:--:--</div>
+      </div>
+
+      <div class="card">
+        <label>STATUS</label>
+        <div class="value neutral">WAITING</div>
+      </div>
+    </section>
+
+    <section class="signal-panel">
+      <div class="signal-box neutral" id="signalBox">
+  NO SIGNAL
+</div>
+
+      <div class="entry-text">
+        ENTRY: NEXT CANDLE
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span>Manual Execution • 1 Minute Expiry • Discipline Mode</span>
+    </footer>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
