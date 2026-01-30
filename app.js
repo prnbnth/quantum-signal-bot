@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const assetSelect = document.getElementById("assetSelect");
 
   function setSignal(type) {
-    signalBox.className = "signal-box";
+    signalBox.style.color = "#aaa";
     if (type === "up") {
       signalBox.textContent = "UP";
       signalBox.style.color = "#00ff9c";
@@ -21,11 +21,10 @@ document.addEventListener("DOMContentLoaded", () => {
       signalBox.style.color = "#ff6a6a";
     } else {
       signalBox.textContent = "NO SIGNAL";
-      signalBox.style.color = "#aaa";
     }
   }
 
-  /* ===== ASSETS ===== */
+  /* ===== ASSETS (CRYPTO AUTO / FOREX MANUAL READY) ===== */
   const ASSETS = {
     BTC: { symbol: "btcusdt", class: "btc", logo: "https://cryptologos.cc/logos/bitcoin-btc-logo.svg" },
     ETH: { symbol: "ethusdt", class: "eth", logo: "https://cryptologos.cc/logos/ethereum-eth-logo.svg" },
@@ -38,33 +37,21 @@ document.addEventListener("DOMContentLoaded", () => {
   let tradeSocket = null;
 
   /* ===== HELPERS ===== */
-  function ema(values, period) {
-    const k = 2 / (period + 1);
-    let ema = values[0];
-    for (let i = 1; i < values.length; i++) {
-      ema = values[i] * k + ema * (1 - k);
-    }
-    return ema;
-  }
-
-  function rsi(values, period = 7) {
-    if (values.length < period + 1) return 50;
-    let gains = 0, losses = 0;
-    for (let i = values.length - period; i < values.length; i++) {
-      const diff = values[i] - values[i - 1];
-      if (diff > 0) gains += diff;
-      else losses -= diff;
-    }
-    const rs = gains / (losses || 1);
-    return 100 - (100 / (1 + rs));
-  }
-
   function isActive(candles) {
     if (candles.length < 10) return false;
-    const ranges = candles.map(c => Math.abs(c.close - c.open));
-    const last = ranges.at(-1);
-    const avg = ranges.slice(-10).reduce((a,b)=>a+b,0) / 10;
-    return last > avg * 1.1;
+    const bodies = candles.map(c => Math.abs(c.close - c.open));
+    const last = bodies.at(-1);
+    const avg = bodies.slice(-10).reduce((a,b)=>a+b,0) / 10;
+    return last >= avg * 1.05;
+  }
+
+  function vwap(candles) {
+    let pv = 0, vol = candles.length;
+    candles.forEach(c => {
+      const typical = (c.high + c.low + c.close) / 3;
+      pv += typical;
+    });
+    return pv / vol;
   }
 
   /* ===== SCANNER ===== */
@@ -76,7 +63,7 @@ document.addEventListener("DOMContentLoaded", () => {
       div.className = `scanner-item ${ASSETS[k].class} ${active ? "active" : "quiet"}`;
       div.innerHTML = `
         <img src="${ASSETS[k].logo}">
-        <div class="scanner-text">
+        <div>
           ${k}<br>${active ? "🔥 ACTIVE" : "⚪ QUIET"}
         </div>
       `;
@@ -90,7 +77,9 @@ document.addEventListener("DOMContentLoaded", () => {
     ws.onmessage = e => {
       const d = JSON.parse(e.data).k;
       if (!d.x) return;
-      scannerData[k].push({ open:+d.o, close:+d.c });
+      scannerData[k].push({
+        open:+d.o, close:+d.c, high:+d.h, low:+d.l
+      });
       if (scannerData[k].length > 30) scannerData[k].shift();
       renderScanner();
     };
@@ -107,7 +96,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const k = JSON.parse(e.data).k;
       if (!k.x) return;
 
-      tradeData.push({ open:+k.o, close:+k.c });
+      tradeData.push({
+        open:+k.o, close:+k.c, high:+k.h, low:+k.l
+      });
       if (tradeData.length > 30) tradeData.shift();
 
       if (!isActive(tradeData)) {
@@ -115,16 +106,30 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      const closes = tradeData.map(c => c.close);
-      const emaFastNow = ema(closes.slice(-5), 5);
-      const emaFastPrev = ema(closes.slice(-6, -1), 5);
-      const r = rsi(closes);
+      const last = tradeData.at(-1);
+      const prev = tradeData.at(-2);
+      const vw = vwap(tradeData.slice(-20));
 
-      if (emaFastNow > emaFastPrev && r > 50) {
+      const body = Math.abs(last.close - last.open);
+      const prevBody = Math.abs(prev.close - prev.open);
+      const range = last.high - last.low;
+      const closePos = (last.close - last.low) / range;
+
+      if (
+        last.close > vw &&
+        closePos > 0.6 &&
+        body > prevBody
+      ) {
         setSignal("up");
-      } else if (emaFastNow < emaFastPrev && r < 50) {
+      }
+      else if (
+        last.close < vw &&
+        closePos < 0.4 &&
+        body > prevBody
+      ) {
         setSignal("down");
-      } else {
+      }
+      else {
         setSignal("neutral");
       }
     };
