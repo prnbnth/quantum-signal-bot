@@ -1,196 +1,185 @@
-document.addEventListener("DOMContentLoaded", () => {
+/* ===== GLOBAL RESET ===== */
+* {
+  box-sizing: border-box;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
 
-  /* =======================
-     IST CLOCK
-  ======================= */
-  const timeBox = document.getElementById("time");
-  function updateTime() {
-    timeBox.textContent =
-      new Date().toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata" });
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 20% 20%, #0ff2, transparent 40%),
+    radial-gradient(circle at 80% 10%, #08f2, transparent 40%),
+    radial-gradient(circle at 50% 90%, #0f82, transparent 40%),
+    linear-gradient(180deg, #050b12, #000);
+  background-attachment: fixed;
+  color: #e9fbf9;
+}
+
+/* ===== APP ===== */
+.app {
+  max-width: 1150px;
+  margin: 40px auto;
+  padding: 34px;
+  border-radius: 26px;
+  background: linear-gradient(
+    180deg,
+    rgba(18, 30, 40, 0.88),
+    rgba(8, 16, 24, 0.92)
+  );
+  box-shadow:
+    0 0 80px rgba(0, 255, 255, 0.12),
+    inset 0 0 60px rgba(255, 255, 255, 0.02);
+}
+
+/* ===== HEADER ===== */
+.header {
+  text-align: center;
+  margin-bottom: 34px;
+}
+
+.header h1 {
+  margin: 0;
+  letter-spacing: 4px;
+  color: #00fff0;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #9be7e1;
+}
+
+/* ===== PANELS ===== */
+.top-panel {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 26px;
+}
+
+.card {
+  padding: 20px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(0, 255, 255, 0.18);
+  backdrop-filter: blur(14px);
+}
+
+.card label {
+  font-size: 12px;
+  color: #9debe4;
+  letter-spacing: 1px;
+}
+
+.value {
+  margin-top: 12px;
+  font-size: 18px;
+}
+
+/* ===== SELECT ===== */
+select {
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #000;
+  border: none;
+  color: #00fff0;
+  font-size: 15px;
+}
+
+/* ===== SIGNAL PANEL ===== */
+.signal-panel {
+  margin-top: 26px;
+  padding: 36px;
+  border-radius: 24px;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 22, 32, 0.95),
+    rgba(4, 10, 16, 0.98)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.signal-box {
+  text-align: center;
+  font-size: 56px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: #aaa;
+}
+
+.signal-box.up {
+  color: #00ff9c;
+  text-shadow: 0 0 28px rgba(0, 255, 160, 0.9);
+}
+
+.signal-box.down {
+  color: #ff6a6a;
+  text-shadow: 0 0 28px rgba(255, 90, 90, 0.9);
+}
+
+.entry-text {
+  text-align: center;
+  margin-top: 14px;
+  font-size: 14px;
+  color: #8ce7df;
+}
+
+/* ===== SCANNER ===== */
+#scanner {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.scanner-item {
+  flex: 1;
+  min-width: 150px;
+  padding: 16px;
+  border-radius: 16px;
+  text-align: center;
+  font-weight: 600;
+  letter-spacing: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #bfe7e4;
+  transition: all 0.35s ease;
+}
+
+/* ACTIVE */
+.scanner-item.active {
+  color: #00fff0;
+  border-color: rgba(0, 255, 220, 0.9);
+  box-shadow:
+    0 0 30px rgba(0, 255, 220, 0.8),
+    inset 0 0 16px rgba(0, 255, 220, 0.3);
+  animation: pulse 1.4s infinite;
+}
+
+/* QUIET */
+.scanner-item.quiet {
+  opacity: 0.55;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 14px rgba(0,255,220,0.4); }
+  50% { box-shadow: 0 0 34px rgba(0,255,220,1); }
+  100% { box-shadow: 0 0 14px rgba(0,255,220,0.4); }
+}
+
+/* ===== FOOTER ===== */
+.footer {
+  margin-top: 30px;
+  text-align: center;
+  font-size: 13px;
+  color: #79dcd4;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 900px) {
+  .top-panel {
+    grid-template-columns: 1fr;
   }
-  setInterval(updateTime, 1000);
-  updateTime();
-
-  /* =======================
-     UI REFERENCES
-  ======================= */
-  const signalBox = document.getElementById("signalBox");
-  const scannerBox = document.getElementById("scanner");
-  const assetSelect = document.getElementById("assetSelect");
-
-  function setSignal(state) {
-    signalBox.className = `signal-box ${state}`;
-    signalBox.textContent =
-      state === "up" ? "UP" :
-      state === "down" ? "DOWN" :
-      "NO SIGNAL";
-  }
-
-  /* =======================
-     CRYPTO ASSETS (REAL TIME)
-  ======================= */
-  const CRYPTO_ASSETS = {
-    BTC: "btcusdt",
-    ETH: "ethusdt",
-    XRP: "xrpusdt",
-    SOL: "solusdt"
-  };
-
-  let tradeSocket = null;
-  let tradeCandles = [];
-  let scannerData = {};
-
-  /* =======================
-     INDICATORS
-  ======================= */
-  function EMA(v, p) {
-    let k = 2 / (p + 1), e = v[0];
-    for (let i = 1; i < v.length; i++) e = v[i] * k + e * (1 - k);
-    return e;
-  }
-
-  function RSI(v, p = 7) {
-    let g = 0, l = 0;
-    for (let i = v.length - p; i < v.length - 1; i++) {
-      let d = v[i + 1] - v[i];
-      d >= 0 ? g += d : l -= d;
-    }
-    if (l === 0) return 100;
-    return 100 - (100 / (1 + g / l));
-  }
-
-  function avgBody(c) {
-    return c.slice(-10).reduce((s, x) =>
-      s + Math.abs(x.close - x.open), 0) / 10;
-  }
-
-  /* =======================
-     MOMENTUM SCORE
-  ======================= */
-  function momentumScore(c) {
-    if (c.length < 15) return 0;
-    const close = c.map(x => x.close);
-    const open = c.map(x => x.open);
-    let score = 0;
-
-    if (EMA(close.slice(-5), 5) > EMA(close.slice(-13), 13)) score++;
-    if (RSI(close) > 55 || RSI(close) < 45) score++;
-    if (Math.abs(close.at(-1) - open.at(-1)) > avgBody(c)) score++;
-
-    return score;
-  }
-
-  /* =======================
-     RENDER SCANNER CARDS
-  ======================= */
-  function renderScanner() {
-    scannerBox.innerHTML = "";
-
-    Object.keys(scannerData).forEach(asset => {
-      const score = momentumScore(scannerData[asset]);
-      const state = score >= 2 ? "hot" : "neutral";
-
-      const card = document.createElement("div");
-      card.className = `scanner-item ${state}`;
-      card.innerHTML = `
-        ${asset}<br>
-        ${state === "hot" ? "🔥 HOT" : "⚪ NEUTRAL"}
-      `;
-
-      scannerBox.appendChild(card);
-    });
-
-    if (!scannerBox.children.length) {
-      scannerBox.textContent = "Waiting for market data…";
-    }
-  }
-
-  /* =======================
-     INIT SCANNER SOCKETS
-  ======================= */
-  Object.keys(CRYPTO_ASSETS).forEach(asset => {
-    scannerData[asset] = [];
-
-    const ws = new WebSocket(
-      `wss://stream.binance.com:9443/ws/${CRYPTO_ASSETS[asset]}@kline_1m`
-    );
-
-    ws.onmessage = e => {
-      const k = JSON.parse(e.data).k;
-      if (!k.x) return;
-
-      scannerData[asset].push({
-        open: +k.o,
-        close: +k.c
-      });
-
-      if (scannerData[asset].length > 50)
-        scannerData[asset].shift();
-
-      renderScanner();
-    };
-  });
-
-  /* =======================
-     TRADE CONNECTION
-  ======================= */
-  function connectMarket(asset) {
-    if (!CRYPTO_ASSETS[asset]) {
-      setSignal("neutral");
-      return;
-    }
-
-    if (tradeSocket) tradeSocket.close();
-    tradeCandles = [];
-    setSignal("neutral");
-
-    tradeSocket = new WebSocket(
-      `wss://stream.binance.com:9443/ws/${CRYPTO_ASSETS[asset]}@kline_1m`
-    );
-
-    tradeSocket.onmessage = e => {
-      const k = JSON.parse(e.data).k;
-      if (!k.x) return;
-
-      tradeCandles.push({
-        open: +k.o,
-        close: +k.c
-      });
-
-      if (tradeCandles.length > 50)
-        tradeCandles.shift();
-
-      evaluateSignal();
-    };
-  }
-
-  /* =======================
-     SIGNAL ENGINE
-  ======================= */
-  function evaluateSignal() {
-    if (tradeCandles.length < 15) return setSignal("neutral");
-
-    const c = tradeCandles.map(x => x.close);
-    const o = tradeCandles.map(x => x.open);
-
-    if (
-      EMA(c.slice(-5), 5) > EMA(c.slice(-13), 13) &&
-      RSI(c) > 55 &&
-      Math.abs(c.at(-1) - o.at(-1)) > avgBody(tradeCandles)
-    ) return setSignal("up");
-
-    if (
-      EMA(c.slice(-5), 5) < EMA(c.slice(-13), 13) &&
-      RSI(c) < 45 &&
-      Math.abs(c.at(-1) - o.at(-1)) > avgBody(tradeCandles)
-    ) return setSignal("down");
-
-    setSignal("neutral");
-  }
-
-  assetSelect.addEventListener("change", e => {
-    connectMarket(e.target.value);
-  });
-
-  connectMarket("BTC");
-});
+}
