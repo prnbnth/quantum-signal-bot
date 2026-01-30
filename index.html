@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Quantum Signal Bot</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -14,11 +14,10 @@
     <span class="subtitle">Real-Time Momentum Scanner · Scalping Engine</span>
   </header>
 
-  <!-- SCANNER -->
   <section class="top-panel">
     <div class="card" style="grid-column: span 3">
       <label>MOMENTUM SCANNER (LIVE)</label>
-      <div id="scanner" class="value">Initializing scanner…</div>
+      <div id="scanner" class="value"></div>
     </div>
   </section>
 
@@ -26,33 +25,16 @@
     <div class="card">
       <label>ASSET</label>
       <select id="assetSelect">
-        <optgroup label="CRYPTO">
-          <option value="BTC">BTC</option>
-          <option value="ETH">ETH</option>
-          <option value="XRP">XRP</option>
-          <option value="SOL">SOL</option>
-        </optgroup>
-
-        <optgroup label="FOREX">
-          <option value="EUR/USD">EUR / USD</option>
-          <option value="GBP/USD">GBP / USD</option>
-          <option value="USD/JPY">USD / JPY</option>
-          <option value="EUR/JPY">EUR / JPY</option>
-          <option value="GBP/JPY">GBP / JPY</option>
-          <option value="AUD/USD">AUD / USD</option>
-          <option value="USD/CAD">USD / CAD</option>
-        </optgroup>
-
-        <optgroup label="METALS">
-          <option value="XAU/USD">XAU / USD</option>
-          <option value="XAG/USD">XAG / USD</option>
-        </optgroup>
+        <option>BTC</option>
+        <option>ETH</option>
+        <option>XRP</option>
+        <option>SOL</option>
       </select>
     </div>
 
     <div class="card">
       <label>TIME (IST)</label>
-      <div class="value" id="time">--:--:--</div>
+      <div class="value" id="time"></div>
     </div>
 
     <div class="card">
@@ -67,12 +49,11 @@
   </section>
 
   <footer class="footer">
-    Scanner → Select HOT asset → Execute precisely
+    Scanner → Select ACTIVE asset → Execute precisely
   </footer>
 
 </div>
 
-<script src="app.js" defer></script>
-
+<script src="app.js"></script>
 </body>
 </html>
