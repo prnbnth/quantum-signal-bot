@@ -11,8 +11,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const signalBox = document.getElementById("signalBox");
   const assetSelect = document.getElementById("assetSelect");
 
-  /* ===== MODE STATE ===== */
-  let mode = "CRYPTO"; // CRYPTO or FOREX
+  /* ===== STATE ===== */
+  let mode = "CRYPTO"; // CRYPTO | FOREX
   let marketActive = false;
 
   /* ===== SIGNAL DISPLAY ===== */
@@ -29,19 +29,49 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  /* ===== ASSETS ===== */
+  /* ===== ASSETS (SINGLE SOURCE OF TRUTH) ===== */
   const ASSETS = {
-    BTC: { symbol: "btcusdt", class: "btc", logo: "https://cryptologos.cc/logos/bitcoin-btc-logo.svg", type: "CRYPTO" },
-    ETH: { symbol: "ethusdt", class: "eth", logo: "https://cryptologos.cc/logos/ethereum-eth-logo.svg", type: "CRYPTO" },
-    XRP: { symbol: "xrpusdt", class: "xrp", logo: "https://cryptologos.cc/logos/xrp-xrp-logo.svg", type: "CRYPTO" },
-    SOL: { symbol: "solusdt", class: "sol", logo: "https://cryptologos.cc/logos/solana-sol-logo.svg", type: "CRYPTO" },
+    BTC: { label: "BTC", symbol: "btcusdt", type: "CRYPTO", class: "btc", logo: "https://cryptologos.cc/logos/bitcoin-btc-logo.svg" },
+    ETH: { label: "ETH", symbol: "ethusdt", type: "CRYPTO", class: "eth", logo: "https://cryptologos.cc/logos/ethereum-eth-logo.svg" },
+    XRP: { label: "XRP", symbol: "xrpusdt", type: "CRYPTO", class: "xrp", logo: "https://cryptologos.cc/logos/xrp-xrp-logo.svg" },
+    SOL: { label: "SOL", symbol: "solusdt", type: "CRYPTO", class: "sol", logo: "https://cryptologos.cc/logos/solana-sol-logo.svg" },
 
-    "EUR/USD": { type: "FOREX" },
-    "GBP/USD": { type: "FOREX" },
-    "USD/JPY": { type: "FOREX" },
-    "XAU/USD": { type: "FOREX" }
+    EURUSD: { label: "EUR/USD", type: "FOREX" },
+    GBPUSD: { label: "GBP/USD", type: "FOREX" },
+    USDJPY: { label: "USD/JPY", type: "FOREX" },
+    XAUUSD: { label: "XAU/USD", type: "FOREX" }
   };
 
+  /* ===== POPULATE ASSET DROPDOWN (FIX) ===== */
+  function populateAssets() {
+    assetSelect.innerHTML = "";
+
+    const cryptoGroup = document.createElement("optgroup");
+    cryptoGroup.label = "CRYPTO";
+
+    const forexGroup = document.createElement("optgroup");
+    forexGroup.label = "FOREX / OTC";
+
+    Object.keys(ASSETS).forEach(key => {
+      const asset = ASSETS[key];
+      const opt = document.createElement("option");
+      opt.value = key;
+      opt.textContent = asset.label;
+
+      if (asset.type === "CRYPTO") {
+        cryptoGroup.appendChild(opt);
+      } else {
+        forexGroup.appendChild(opt);
+      }
+    });
+
+    assetSelect.appendChild(cryptoGroup);
+    assetSelect.appendChild(forexGroup);
+  }
+
+  populateAssets();
+
+  /* ===== DATA ===== */
   let scannerData = {};
   let tradeData = [];
   let tradeSocket = null;
@@ -67,21 +97,25 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderScanner() {
     scannerBox.innerHTML = "";
     Object.keys(scannerData).forEach(k => {
+      const asset = ASSETS[k];
       const active = isActive(scannerData[k]);
       const div = document.createElement("div");
-      div.className = `scanner-item ${ASSETS[k].class} ${active ? "active" : "quiet"}`;
+      div.className = `scanner-item ${asset.class} ${active ? "active" : "quiet"}`;
       div.innerHTML = `
-        <img src="${ASSETS[k].logo}">
-        <div>${k}<br>${active ? "🔥 ACTIVE" : "⚪ QUIET"}</div>
+        <img src="${asset.logo}">
+        <div>${asset.label}<br>${active ? "🔥 ACTIVE" : "⚪ QUIET"}</div>
       `;
       scannerBox.appendChild(div);
     });
   }
 
+  /* ===== INIT CRYPTO SCANNER ===== */
   Object.keys(ASSETS).forEach(k => {
     if (ASSETS[k].type !== "CRYPTO") return;
     scannerData[k] = [];
-    const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${ASSETS[k].symbol}@kline_1m`);
+    const ws = new WebSocket(
+      `wss://stream.binance.com:9443/ws/${ASSETS[k].symbol}@kline_1m`
+    );
     ws.onmessage = e => {
       const d = JSON.parse(e.data).k;
       if (!d.x) return;
@@ -93,19 +127,24 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   });
 
-  /* ===== TRADE ENGINE (CRYPTO + FOREX CONFIRMATION) ===== */
-  function connectTrade(asset) {
+  /* ===== TRADE ENGINE ===== */
+  function connectTrade(assetKey) {
     if (tradeSocket) tradeSocket.close();
     tradeData = [];
     setSignal("neutral");
 
-    if (ASSETS[asset].type === "FOREX") {
+    const asset = ASSETS[assetKey];
+
+    if (asset.type === "FOREX") {
       mode = "FOREX";
+      alert("FOREX MODE ENABLED\nPress A to toggle Market Active");
       return;
     }
 
     mode = "CRYPTO";
-    tradeSocket = new WebSocket(`wss://stream.binance.com:9443/ws/${ASSETS[asset].symbol}@kline_1m`);
+    tradeSocket = new WebSocket(
+      `wss://stream.binance.com:9443/ws/${asset.symbol}@kline_1m`
+    );
     tradeSocket.onmessage = e => {
       const k = JSON.parse(e.data).k;
       if (!k.x) return;
@@ -114,7 +153,6 @@ document.addEventListener("DOMContentLoaded", () => {
         open:+k.o, close:+k.c, high:+k.h, low:+k.l
       });
       if (tradeData.length > 30) tradeData.shift();
-
       evaluateSignal();
     };
   }
@@ -145,29 +183,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const range = last.high - last.low;
     const closePos = (last.close - last.low) / range;
 
-    if (
-      last.close > vw &&
-      closePos > 0.6 &&
-      body > prevBody
-    ) {
+    if (last.close > vw && closePos > 0.6 && body > prevBody) {
       setSignal("up");
-    }
-    else if (
-      last.close < vw &&
-      closePos < 0.4 &&
-      body > prevBody
-    ) {
+    } else if (last.close < vw && closePos < 0.4 && body > prevBody) {
       setSignal("down");
-    }
-    else {
+    } else {
       setSignal("neutral");
     }
   }
 
-  /* ===== MANUAL FOREX CONTROL ===== */
+  /* ===== FOREX MANUAL CONTROL ===== */
   document.addEventListener("keydown", e => {
     if (mode !== "FOREX") return;
-    if (e.key === "a") {
+    if (e.key.toLowerCase() === "a") {
       marketActive = !marketActive;
       alert(`FOREX MARKET ACTIVE: ${marketActive ? "ON" : "OFF"}`);
     }
@@ -177,5 +205,6 @@ document.addEventListener("DOMContentLoaded", () => {
     connectTrade(e.target.value);
   });
 
+  /* ===== DEFAULT ===== */
   connectTrade("BTC");
 });
