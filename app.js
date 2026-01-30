@@ -7,7 +7,6 @@ document.addEventListener("DOMContentLoaded", () => {
       new Date().toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata" });
   }, 1000);
 
-  /* ===== UI ===== */
   const scannerBox = document.getElementById("scanner");
   const signalBox = document.getElementById("signalBox");
   const assetSelect = document.getElementById("assetSelect");
@@ -20,55 +19,78 @@ document.addEventListener("DOMContentLoaded", () => {
       "NO SIGNAL";
   }
 
-  /* ===== CRYPTO ASSETS ===== */
+  /* ===== ASSETS ===== */
   const ASSETS = {
-    BTC: "btcusdt",
-    ETH: "ethusdt",
-    XRP: "xrpusdt",
-    SOL: "solusdt"
+    BTC: {
+      symbol: "btcusdt",
+      class: "btc",
+      logo: "https://cryptologos.cc/logos/bitcoin-btc-logo.svg"
+    },
+    ETH: {
+      symbol: "ethusdt",
+      class: "eth",
+      logo: "https://cryptologos.cc/logos/ethereum-eth-logo.svg"
+    },
+    XRP: {
+      symbol: "xrpusdt",
+      class: "xrp",
+      logo: "https://cryptologos.cc/logos/xrp-xrp-logo.svg"
+    },
+    SOL: {
+      symbol: "solusdt",
+      class: "sol",
+      logo: "https://cryptologos.cc/logos/solana-sol-logo.svg"
+    }
   };
 
   let scannerData = {};
-  let tradeCandles = [];
   let tradeSocket = null;
+  let tradeCandles = [];
 
-  /* ===== ACTIVITY SCORE ===== */
-  function activityScore(c) {
-    if (c.length < 10) return 0;
+  /* ===== ACTIVITY CHECK ===== */
+  function isActive(c) {
+    if (c.length < 10) return false;
     const ranges = c.map(x => Math.abs(x.close - x.open));
     const last = ranges.at(-1);
     const avg = ranges.slice(-10).reduce((a,b)=>a+b,0) / 10;
-    return last > avg * 1.2 ? 1 : 0;
+    return last > avg * 1.15;
   }
 
-  /* ===== SCANNER RENDER ===== */
+  /* ===== RENDER SCANNER ===== */
   function renderScanner() {
     scannerBox.innerHTML = "";
 
-    Object.keys(scannerData).forEach(a => {
-      const active = activityScore(scannerData[a]);
+    Object.keys(scannerData).forEach(k => {
+      const active = isActive(scannerData[k]);
+      const a = ASSETS[k];
+
       const div = document.createElement("div");
-      div.className = `scanner-item ${active ? "active" : "quiet"}`;
+      div.className = `scanner-item ${a.class} ${active ? "active" : "quiet"}`;
+
       div.innerHTML = `
-        ${a}<br>
-        ${active ? "🔥 ACTIVE" : "⚪ QUIET"}
+        <img src="${a.logo}" alt="${k}">
+        <div class="scanner-text">
+          ${k}<br>
+          ${active ? "🔥 ACTIVE" : "⚪ QUIET"}
+        </div>
       `;
+
       scannerBox.appendChild(div);
     });
   }
 
-  /* ===== INIT SCANNER ===== */
-  Object.keys(ASSETS).forEach(a => {
-    scannerData[a] = [];
+  /* ===== SCANNER SOCKETS ===== */
+  Object.keys(ASSETS).forEach(k => {
+    scannerData[k] = [];
     const ws = new WebSocket(
-      `wss://stream.binance.com:9443/ws/${ASSETS[a]}@kline_1m`
+      `wss://stream.binance.com:9443/ws/${ASSETS[k].symbol}@kline_1m`
     );
     ws.onmessage = e => {
-      const k = JSON.parse(e.data).k;
-      if (!k.x) return;
-      scannerData[a].push({ open:+k.o, close:+k.c });
-      if (scannerData[a].length > 30)
-        scannerData[a].shift();
+      const d = JSON.parse(e.data).k;
+      if (!d.x) return;
+      scannerData[k].push({ open:+d.o, close:+d.c });
+      if (scannerData[k].length > 30)
+        scannerData[k].shift();
       renderScanner();
     };
   });
@@ -81,13 +103,13 @@ document.addEventListener("DOMContentLoaded", () => {
     setSignal("neutral");
 
     tradeSocket = new WebSocket(
-      `wss://stream.binance.com:9443/ws/${ASSETS[asset]}@kline_1m`
+      `wss://stream.binance.com:9443/ws/${ASSETS[asset].symbol}@kline_1m`
     );
 
     tradeSocket.onmessage = e => {
-      const k = JSON.parse(e.data).k;
-      if (!k.x) return;
-      tradeCandles.push({ open:+k.o, close:+k.c });
+      const d = JSON.parse(e.data).k;
+      if (!d.x) return;
+      tradeCandles.push({ open:+d.o, close:+d.c });
       if (tradeCandles.length > 30)
         tradeCandles.shift();
     };
