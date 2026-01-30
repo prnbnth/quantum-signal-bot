@@ -11,6 +11,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const signalBox = document.getElementById("signalBox");
   const assetSelect = document.getElementById("assetSelect");
 
+  /* ===== MODE STATE ===== */
+  let mode = "CRYPTO"; // CRYPTO or FOREX
+  let marketActive = false;
+
+  /* ===== SIGNAL DISPLAY ===== */
   function setSignal(type) {
     signalBox.style.color = "#aaa";
     if (type === "up") {
@@ -24,12 +29,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  /* ===== ASSETS (CRYPTO AUTO / FOREX MANUAL READY) ===== */
+  /* ===== ASSETS ===== */
   const ASSETS = {
-    BTC: { symbol: "btcusdt", class: "btc", logo: "https://cryptologos.cc/logos/bitcoin-btc-logo.svg" },
-    ETH: { symbol: "ethusdt", class: "eth", logo: "https://cryptologos.cc/logos/ethereum-eth-logo.svg" },
-    XRP: { symbol: "xrpusdt", class: "xrp", logo: "https://cryptologos.cc/logos/xrp-xrp-logo.svg" },
-    SOL: { symbol: "solusdt", class: "sol", logo: "https://cryptologos.cc/logos/solana-sol-logo.svg" }
+    BTC: { symbol: "btcusdt", class: "btc", logo: "https://cryptologos.cc/logos/bitcoin-btc-logo.svg", type: "CRYPTO" },
+    ETH: { symbol: "ethusdt", class: "eth", logo: "https://cryptologos.cc/logos/ethereum-eth-logo.svg", type: "CRYPTO" },
+    XRP: { symbol: "xrpusdt", class: "xrp", logo: "https://cryptologos.cc/logos/xrp-xrp-logo.svg", type: "CRYPTO" },
+    SOL: { symbol: "solusdt", class: "sol", logo: "https://cryptologos.cc/logos/solana-sol-logo.svg", type: "CRYPTO" },
+
+    "EUR/USD": { type: "FOREX" },
+    "GBP/USD": { type: "FOREX" },
+    "USD/JPY": { type: "FOREX" },
+    "XAU/USD": { type: "FOREX" }
   };
 
   let scannerData = {};
@@ -46,15 +56,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function vwap(candles) {
-    let pv = 0, vol = candles.length;
+    let sum = 0;
     candles.forEach(c => {
-      const typical = (c.high + c.low + c.close) / 3;
-      pv += typical;
+      sum += (c.high + c.low + c.close) / 3;
     });
-    return pv / vol;
+    return sum / candles.length;
   }
 
-  /* ===== SCANNER ===== */
+  /* ===== CRYPTO SCANNER ===== */
   function renderScanner() {
     scannerBox.innerHTML = "";
     Object.keys(scannerData).forEach(k => {
@@ -63,15 +72,14 @@ document.addEventListener("DOMContentLoaded", () => {
       div.className = `scanner-item ${ASSETS[k].class} ${active ? "active" : "quiet"}`;
       div.innerHTML = `
         <img src="${ASSETS[k].logo}">
-        <div>
-          ${k}<br>${active ? "🔥 ACTIVE" : "⚪ QUIET"}
-        </div>
+        <div>${k}<br>${active ? "🔥 ACTIVE" : "⚪ QUIET"}</div>
       `;
       scannerBox.appendChild(div);
     });
   }
 
   Object.keys(ASSETS).forEach(k => {
+    if (ASSETS[k].type !== "CRYPTO") return;
     scannerData[k] = [];
     const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${ASSETS[k].symbol}@kline_1m`);
     ws.onmessage = e => {
@@ -85,12 +93,18 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   });
 
-  /* ===== TRADE ENGINE ===== */
+  /* ===== TRADE ENGINE (CRYPTO + FOREX CONFIRMATION) ===== */
   function connectTrade(asset) {
     if (tradeSocket) tradeSocket.close();
     tradeData = [];
     setSignal("neutral");
 
+    if (ASSETS[asset].type === "FOREX") {
+      mode = "FOREX";
+      return;
+    }
+
+    mode = "CRYPTO";
     tradeSocket = new WebSocket(`wss://stream.binance.com:9443/ws/${ASSETS[asset].symbol}@kline_1m`);
     tradeSocket.onmessage = e => {
       const k = JSON.parse(e.data).k;
@@ -101,39 +115,63 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       if (tradeData.length > 30) tradeData.shift();
 
-      if (!isActive(tradeData)) {
-        setSignal("neutral");
-        return;
-      }
-
-      const last = tradeData.at(-1);
-      const prev = tradeData.at(-2);
-      const vw = vwap(tradeData.slice(-20));
-
-      const body = Math.abs(last.close - last.open);
-      const prevBody = Math.abs(prev.close - prev.open);
-      const range = last.high - last.low;
-      const closePos = (last.close - last.low) / range;
-
-      if (
-        last.close > vw &&
-        closePos > 0.6 &&
-        body > prevBody
-      ) {
-        setSignal("up");
-      }
-      else if (
-        last.close < vw &&
-        closePos < 0.4 &&
-        body > prevBody
-      ) {
-        setSignal("down");
-      }
-      else {
-        setSignal("neutral");
-      }
+      evaluateSignal();
     };
   }
+
+  /* ===== SIGNAL LOGIC ===== */
+  function evaluateSignal() {
+    if (mode === "FOREX" && !marketActive) {
+      setSignal("neutral");
+      return;
+    }
+
+    if (tradeData.length < 10) {
+      setSignal("neutral");
+      return;
+    }
+
+    if (!isActive(tradeData)) {
+      setSignal("neutral");
+      return;
+    }
+
+    const last = tradeData.at(-1);
+    const prev = tradeData.at(-2);
+    const vw = vwap(tradeData.slice(-20));
+
+    const body = Math.abs(last.close - last.open);
+    const prevBody = Math.abs(prev.close - prev.open);
+    const range = last.high - last.low;
+    const closePos = (last.close - last.low) / range;
+
+    if (
+      last.close > vw &&
+      closePos > 0.6 &&
+      body > prevBody
+    ) {
+      setSignal("up");
+    }
+    else if (
+      last.close < vw &&
+      closePos < 0.4 &&
+      body > prevBody
+    ) {
+      setSignal("down");
+    }
+    else {
+      setSignal("neutral");
+    }
+  }
+
+  /* ===== MANUAL FOREX CONTROL ===== */
+  document.addEventListener("keydown", e => {
+    if (mode !== "FOREX") return;
+    if (e.key === "a") {
+      marketActive = !marketActive;
+      alert(`FOREX MARKET ACTIVE: ${marketActive ? "ON" : "OFF"}`);
+    }
+  });
 
   assetSelect.addEventListener("change", e => {
     connectTrade(e.target.value);
