@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Quantum Signal Bot</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,18 +12,18 @@
 
   <header class="header">
     <h1>QUANTUM SIGNAL BOT</h1>
-    <span class="subtitle">Real-Time Momentum Scanner · Scalping Engine</span>
+    <p class="subtitle">Real-Time Momentum Scanner · Scalping Engine</p>
   </header>
 
-  <section class="top-panel">
-    <div class="card" style="grid-column: span 3">
-      <label>MOMENTUM SCANNER (LIVE)</label>
-      <div id="scanner" class="value"></div>
-    </div>
+  <!-- SCANNER -->
+  <section class="scanner-panel">
+    <h3>MOMENTUM SCANNER (LIVE)</h3>
+    <div id="scanner" class="scanner-grid"></div>
   </section>
 
-  <section class="top-panel">
-    <div class="card">
+  <!-- INFO -->
+  <section class="info-grid">
+    <div class="info-card">
       <label>ASSET</label>
       <select id="assetSelect">
         <option>BTC</option>
@@ -32,19 +33,20 @@
       </select>
     </div>
 
-    <div class="card">
+    <div class="info-card">
       <label>TIME (IST)</label>
-      <div class="value" id="time"></div>
+      <div id="time" class="value"></div>
     </div>
 
-    <div class="card">
+    <div class="info-card">
       <label>SIGNAL</label>
       <div class="value">SCALPING MODE</div>
     </div>
   </section>
 
+  <!-- SIGNAL -->
   <section class="signal-panel">
-    <div class="signal-box neutral" id="signalBox">NO SIGNAL</div>
+    <div id="signalBox" class="signal-box">NO SIGNAL</div>
     <div class="entry-text">ENTRY: NEXT CANDLE · EXIT: +30s</div>
   </section>
 
